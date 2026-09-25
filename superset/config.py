@@ -2160,9 +2160,11 @@ FLASK_APP_MUTATOR = None
 SMTP_HOST = "localhost"
 SMTP_STARTTLS = True
 SMTP_SSL = False
-SMTP_USER = "superset"
+# Leave both unset (None or "") for an unauthenticated SMTP server; login is
+# only attempted when both SMTP_USER and SMTP_PASSWORD are set.
+SMTP_USER = None
 SMTP_PORT = 25
-SMTP_PASSWORD = "superset"  # noqa: S105
+SMTP_PASSWORD = None
 SMTP_MAIL_FROM = "superset@superset.com"
 # If True creates a default SSL context with ssl.Purpose.SERVER_AUTH using the
 # default system root CA certificates. This makes STARTTLS/SSL connections to the

@@ -24,6 +24,16 @@ assists people when migrating to a new version.
 
 ## Next
 
+### SMTP credentials no longer default to `superset`/`superset`
+
+`SMTP_USER` and `SMTP_PASSWORD` now default to `None` instead of the
+placeholder pair `"superset"`/`"superset"`. Since `send_mime_email` only
+calls `smtp.login()` when both values are set, a deployment that overrides
+only `SMTP_HOST` no longer sends a well-known credential pair to that server.
+Deployments that relied on the old defaults to authenticate against a relay
+must set both `SMTP_USER` and `SMTP_PASSWORD` explicitly in
+`superset_config.py` to keep authenticating.
+
 ### MCP response size guard: byte limit instead of estimated token count
 
 The MCP response-size guard no longer estimates LLM token counts (it
