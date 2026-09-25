@@ -495,3 +495,13 @@ def test_send_mime_email_server_auth_disabled_skips_context(
 
     assert not create_default_context.called
     smtp_ssl.assert_called_once_with("localhost", 25, context=None, timeout=30)
+
+
+def test_config_fingerprint_digest_is_stable() -> None:
+    """
+    Test the config fingerprint of known bytes is unchanged.
+    """
+    from superset.config import _config_fingerprint
+
+    assert _config_fingerprint(b"test config source\n") == "07b8946054e0"
+    assert _config_fingerprint(None) == "unreadable"

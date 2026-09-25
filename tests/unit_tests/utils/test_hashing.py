@@ -19,9 +19,15 @@ from unittest.mock import patch
 import pytest
 
 from superset.utils.hashing import (
+    _HASH_FUNCTIONS,
     hash_from_dict,
     hash_from_str,
 )
+
+
+def test_md5_hash_function_digest_is_stable():
+    """Test the MD5 dispatch entry produces the standard MD5 digest."""
+    assert _HASH_FUNCTIONS["md5"](b"superset") == "31e135d25d7758ced1813b910fc201a5"
 
 
 def test_hash_from_str_sha256():
