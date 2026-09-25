@@ -387,6 +387,43 @@ def test_smtp_ssl_server_auth_defaults_to_true() -> None:
     assert config.SMTP_SSL_SERVER_AUTH is True
 
 
+def test_smtp_credentials_default_to_unset() -> None:
+    """
+    No SMTP credentials ship by default, so a deployment that only overrides
+    SMTP_HOST does not send a well-known user/password pair to that server.
+    """
+    from superset import config
+
+    assert not config.SMTP_USER
+    assert not config.SMTP_PASSWORD
+
+
+def test_send_mime_email_skips_login_without_credentials(
+    mocker: MockerFixture,
+) -> None:
+    """
+    ``send_mime_email`` does not call ``smtp.login`` when SMTP_USER and
+    SMTP_PASSWORD are unset.
+    """
+    from email.mime.multipart import MIMEMultipart
+
+    from superset.utils import core as utils
+
+    mock_smtp = mocker.patch("smtplib.SMTP")
+    mocker.patch("smtplib.SMTP_SSL")
+
+    utils.send_mime_email(
+        "from",
+        ["to"],
+        MIMEMultipart(),
+        _smtp_config(SMTP_USER=None, SMTP_PASSWORD=None),
+        dryrun=False,
+    )
+
+    assert not mock_smtp.return_value.login.called
+    assert mock_smtp.return_value.sendmail.called
+
+
 def _smtp_config(**overrides: Any) -> dict[str, Any]:
     """
     Build a minimal SMTP config dict for ``send_mime_email`` tests, with

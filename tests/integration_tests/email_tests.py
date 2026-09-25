@@ -37,7 +37,13 @@ logger = logging.getLogger(__name__)
 
 
 class TestEmailSmtp(SupersetTestCase):
-    SMTP_CONFIG_KEYS = ("SMTP_SSL", "SMTP_SSL_SERVER_AUTH", "SMTP_STARTTLS")
+    SMTP_CONFIG_KEYS = (
+        "SMTP_SSL",
+        "SMTP_SSL_SERVER_AUTH",
+        "SMTP_STARTTLS",
+        "SMTP_USER",
+        "SMTP_PASSWORD",
+    )
 
     def setUp(self) -> None:
         self._original_smtp_config = {
@@ -197,6 +203,8 @@ class TestEmailSmtp(SupersetTestCase):
     @mock.patch("smtplib.SMTP_SSL")
     @mock.patch("smtplib.SMTP")
     def test_send_mime(self, mock_smtp, mock_smtp_ssl):
+        current_app.config["SMTP_USER"] = "smtp_user"
+        current_app.config["SMTP_PASSWORD"] = "smtp_password"  # noqa: S105
         mock_smtp.return_value = mock.Mock()
         mock_smtp_ssl.return_value = mock.Mock()
         msg = MIMEMultipart()
@@ -207,9 +215,7 @@ class TestEmailSmtp(SupersetTestCase):
             timeout=current_app.config["SMTP_TIMEOUT"],
         )
         assert mock_smtp.return_value.starttls.called
-        mock_smtp.return_value.login.assert_called_with(
-            current_app.config["SMTP_USER"], current_app.config["SMTP_PASSWORD"]
-        )
+        mock_smtp.return_value.login.assert_called_with("smtp_user", "smtp_password")
         mock_smtp.return_value.sendmail.assert_called_with(
             "from", "to", msg.as_string()
         )
@@ -284,7 +290,7 @@ class TestEmailSmtp(SupersetTestCase):
             current_app.config["SMTP_PORT"],
             timeout=current_app.config["SMTP_TIMEOUT"],
         )
-        assert not mock_smtp.login.called
+        assert not mock_smtp.return_value.login.called
         current_app.config["SMTP_USER"] = smtp_user
         current_app.config["SMTP_PASSWORD"] = smtp_password
 
