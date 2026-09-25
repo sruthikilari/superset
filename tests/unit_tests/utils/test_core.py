@@ -2069,6 +2069,41 @@ def test_send_email_smtp_strips_crlf_from_subject() -> None:
     assert subject == "Hello Bcc: attacker@example.com"
 
 
+def test_smtp_credentials_default_to_unset() -> None:
+    from superset import config as superset_config
+
+    assert not superset_config.SMTP_USER
+    assert not superset_config.SMTP_PASSWORD
+
+
+@pytest.mark.parametrize(
+    ("smtp_user", "smtp_password"),
+    [(None, None), ("", ""), ("user", None), (None, "password")],
+)
+def test_send_mime_email_skips_login_without_credentials(
+    smtp_user: Optional[str], smtp_password: Optional[str]
+) -> None:
+    from email.mime.multipart import MIMEMultipart
+
+    from superset.utils.core import send_mime_email
+
+    config = {
+        "SMTP_HOST": "localhost",
+        "SMTP_PORT": 25,
+        "SMTP_USER": smtp_user,
+        "SMTP_PASSWORD": smtp_password,
+        "SMTP_STARTTLS": False,
+        "SMTP_SSL": False,
+        "SMTP_SSL_SERVER_AUTH": False,
+    }
+
+    with patch("smtplib.SMTP") as mock_smtp:
+        send_mime_email("from@example.com", ["to@example.com"], MIMEMultipart(), config)
+
+    mock_smtp.return_value.login.assert_not_called()
+    mock_smtp.return_value.sendmail.assert_called_once()
+
+
 @pytest.mark.parametrize(
     "token",
     [
