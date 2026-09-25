@@ -18,10 +18,12 @@ from unittest.mock import patch
 
 import pytest
 
+from superset.config import _config_fingerprint
 from superset.utils.hashing import (
     hash_from_dict,
     hash_from_str,
 )
+from superset.utils.public_interfaces import compute_class_hash, compute_func_hash
 
 
 def test_hash_from_str_sha256():
@@ -181,3 +183,18 @@ def test_md5_vs_sha256_different_outputs():
     assert len(md5_result) == 32
     # SHA-256 produces 64 character hex string
     assert len(sha256_result) == 64
+
+
+def test_md5_helpers_digests_unchanged():
+    """Test non-security md5 helpers produce the same digests as plain md5."""
+
+    def sample(a: int, b: str = "x") -> None:
+        pass
+
+    class Sample:
+        def method(self, value: int) -> int:
+            return value
+
+    assert _config_fingerprint(b"superset") == "31e135d25d77"
+    assert compute_func_hash(sample) == "wlOMDy<HL9>>9E!Rp_(w"
+    assert compute_class_hash(Sample) == "?j)9^om(HnFIF!AYi?8_"
