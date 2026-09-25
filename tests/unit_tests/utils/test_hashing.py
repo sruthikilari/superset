@@ -14,7 +14,11 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+import hashlib
+from base64 import b85encode
+from inspect import signature
 from unittest.mock import patch
+from uuid import UUID
 
 import pytest
 
@@ -181,3 +185,27 @@ def test_md5_vs_sha256_different_outputs():
     assert len(md5_result) == 32
     # SHA-256 produces 64 character hex string
     assert len(sha256_result) == 64
+
+
+def test_md5_digests_match_stdlib():
+    """MD5 helpers marked ``usedforsecurity=False`` produce unchanged digests."""
+    from superset.config import _config_fingerprint
+    from superset.key_value.utils import _uuid_namespace_from_md5
+    from superset.utils.public_interfaces import compute_func_hash
+
+    assert (
+        hash_from_str("test", algorithm="md5")
+        == hashlib.md5(b"test", usedforsecurity=False).hexdigest()
+    )
+    assert (
+        _config_fingerprint(b"test")
+        == hashlib.md5(b"test", usedforsecurity=False).hexdigest()[:12]
+    )
+    assert _uuid_namespace_from_md5("test_seed") == UUID(
+        hashlib.md5(b"test_seed", usedforsecurity=False).hexdigest()
+    )
+    assert compute_func_hash(hash_from_str) == b85encode(
+        hashlib.md5(
+            str(signature(hash_from_str)).encode(), usedforsecurity=False
+        ).digest()
+    ).decode("utf-8")
