@@ -387,6 +387,46 @@ def test_smtp_ssl_server_auth_defaults_to_true() -> None:
     assert config.SMTP_SSL_SERVER_AUTH is True
 
 
+@pytest.mark.parametrize(
+    "superset_env, expected",
+    [
+        (None, True),
+        ("production", True),
+        ("staging", True),
+        ("development", False),
+    ],
+)
+def test_ratelimit_enabled_default(
+    monkeypatch: pytest.MonkeyPatch,
+    superset_env: str | None,
+    expected: bool,
+) -> None:
+    """
+    Rate limiting is on by default and only turned off when SUPERSET_ENV is
+    "development". ``RATELIMIT_ENABLED`` is evaluated at import time, so a fresh
+    copy of the config module is executed with the environment patched.
+    """
+    import importlib.util
+
+    from superset import config
+
+    if superset_env is None:
+        monkeypatch.delenv("SUPERSET_ENV", raising=False)
+    else:
+        monkeypatch.setenv("SUPERSET_ENV", superset_env)
+    monkeypatch.delenv(config.CONFIG_PATH_ENV_VAR, raising=False)
+
+    spec = importlib.util.spec_from_file_location(
+        "superset_config_under_test", config.__file__
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    fresh_config = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fresh_config)
+
+    assert fresh_config.RATELIMIT_ENABLED is expected
+
+
 def _smtp_config(**overrides: Any) -> dict[str, Any]:
     """
     Build a minimal SMTP config dict for ``send_mime_email`` tests, with

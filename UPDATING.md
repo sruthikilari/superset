@@ -24,6 +24,19 @@ assists people when migrating to a new version.
 
 ## Next
 
+### Rate limiting is on unless `SUPERSET_ENV=development`
+
+`RATELIMIT_ENABLED` now defaults to `True` unless `SUPERSET_ENV` is set to
+`development`. Previously it was only enabled when `SUPERSET_ENV=production`,
+so installs that left `SUPERSET_ENV` unset (or set it to another value such as
+`staging`) ran without rate limits. The official Docker image already sets
+`SUPERSET_ENV=production` and is unaffected. Other deployments, including
+non-Docker installs and load tests, are now throttled by the default limits
+(`RATELIMIT_APPLICATION = "50 per second"` application-wide and
+`AUTH_RATE_LIMIT = "5 per second"` on login). To keep the old behavior, set
+`SUPERSET_ENV=development` or set `RATELIMIT_ENABLED = False` in
+`superset_config.py`.
+
 ### SMTP credentials no longer default to `superset`/`superset`
 
 `SMTP_USER` and `SMTP_PASSWORD` now default to `None` instead of the
