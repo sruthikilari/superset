@@ -16,6 +16,7 @@
 # under the License.
 # pylint: disable=import-outside-toplevel, unused-argument, redefined-outer-name, invalid-name
 
+import importlib
 from functools import partial
 from typing import Any, TYPE_CHECKING
 
@@ -71,6 +72,35 @@ def test_oversized_version_history_retention_env_uses_default(
 
     assert config._parse_version_history_retention_days() == 30
     assert "exceeds the maximum" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "superset_env, expected",
+    [
+        (None, True),
+        ("production", True),
+        ("staging", True),
+        ("development", False),
+    ],
+)
+def test_ratelimit_enabled_default(
+    monkeypatch: pytest.MonkeyPatch,
+    superset_env: str | None,
+    expected: bool,
+) -> None:
+    """Rate limiting is on unless SUPERSET_ENV is explicitly ``development``."""
+    from superset import config
+
+    if superset_env is None:
+        monkeypatch.delenv("SUPERSET_ENV", raising=False)
+    else:
+        monkeypatch.setenv("SUPERSET_ENV", superset_env)
+
+    try:
+        assert importlib.reload(config).RATELIMIT_ENABLED is expected
+    finally:
+        monkeypatch.undo()
+        importlib.reload(config)
 
 
 def apply_dttm_defaults(table: "SqlaTable", dttm_defaults: dict[str, Any]) -> None:
