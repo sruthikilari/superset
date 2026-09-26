@@ -16,7 +16,9 @@
 # under the License.
 # pylint: disable=import-outside-toplevel, unused-argument, redefined-outer-name, invalid-name
 
+import importlib.util
 from functools import partial
+from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
 import pytest
@@ -385,6 +387,44 @@ def test_smtp_ssl_server_auth_defaults_to_true() -> None:
     from superset import config
 
     assert config.SMTP_SSL_SERVER_AUTH is True
+
+
+@pytest.mark.parametrize(
+    "superset_env, expected",
+    [
+        (None, True),
+        ("production", True),
+        ("staging", True),
+        ("development", False),
+    ],
+)
+def test_ratelimit_enabled_default(
+    monkeypatch: pytest.MonkeyPatch,
+    superset_env: str | None,
+    expected: bool,
+) -> None:
+    """
+    Rate limiting is on unless SUPERSET_ENV=development. The value is computed at
+    import time, so a fresh copy of the config module is executed with the
+    environment patched, leaving ``superset.config`` untouched.
+    """
+    from superset import config
+
+    if superset_env is None:
+        monkeypatch.delenv("SUPERSET_ENV", raising=False)
+    else:
+        monkeypatch.setenv("SUPERSET_ENV", superset_env)
+    monkeypatch.delenv(config.CONFIG_PATH_ENV_VAR, raising=False)
+
+    spec = importlib.util.spec_from_file_location(
+        "_superset_config_ratelimit_test", Path(config.__file__)
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    fresh_config = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fresh_config)
+
+    assert fresh_config.RATELIMIT_ENABLED is expected
 
 
 def _smtp_config(**overrides: Any) -> dict[str, Any]:
